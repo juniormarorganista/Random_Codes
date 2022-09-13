@@ -17,7 +17,7 @@ from uvw import RectilinearGrid, DataArray
 
 #IO: Creating dir
 cwd =os.getcwd()
-dir_=cwd+'/Theta0.5-mu1e-3-DT1e-8-33-33-T1e-3'
+dir_=cwd+'/casos'
 
 if not os.path.exists(dir_):
     os.makedirs(dir_)
