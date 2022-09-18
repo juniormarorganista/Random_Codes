@@ -27,15 +27,15 @@ for n1 in ${!N1[@]}
 do
 for n2 in ${!N2[@]}
 do
-    sed -i "/^dir_=/cdir_=cwd+'/Theta${Theta[$th]}-mu${muuu[$m]}-DT${DT[$t]}-${N1[$n1]}-${N2[$n2]}-T${T[$per]}'" escoamentoemduto.py
-    sed -i "/^theta =/ctheta = ${Theta[$th]}" escoamentoemduto.py
-    sed -i "/^N1    =/cN1    = ${N1[$n1]}" escoamentoemduto.py
-    sed -i "/^N2    =/cN2    = ${N2[$n2]}" escoamentoemduto.py
-    sed -i "/^dt    =/cdt    = ${DT[$t]}" escoamentoemduto.py
-    sed -i "/^T     =/cT     = ${T[$per]}" escoamentoemduto.py
-    sed -i "/^mu    =/cmu    = ${muuu[$m]}" escoamentoemduto.py
+    sed -i "/^dir_=/cdir_=cwd+'/Theta${Theta[$th]}-mu${muuu[$m]}-DT${DT[$t]}-${N1[$n1]}-${N2[$n2]}-T${T[$per]}'" escoamentoemduto_df.py
+    sed -i "/^theta =/ctheta = ${Theta[$th]}" escoamentoemduto_df.py
+    sed -i "/^N1    =/cN1    = ${N1[$n1]}" escoamentoemduto_df.py
+    sed -i "/^N2    =/cN2    = ${N2[$n2]}" escoamentoemduto_df.py
+    sed -i "/^dt    =/cdt    = ${DT[$t]}" escoamentoemduto_df.py
+    sed -i "/^T     =/cT     = ${T[$per]}" escoamentoemduto_df.py
+    sed -i "/^mu    =/cmu    = ${muuu[$m]}" escoamentoemduto_df.py
     
-    python3 escoamentoemduto.py
+    python3 escoamentoemduto_df.py
 done
 done
 done
