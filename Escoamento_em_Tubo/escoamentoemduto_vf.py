@@ -8,7 +8,6 @@ import shutil
 import matplotlib
 import matplotlib.pyplot as plt
 from uvw import RectilinearGrid, DataArray
-
 from scipy.sparse.linalg import inv
 
 # IO
@@ -302,9 +301,8 @@ def BuildSystem(x, y, CF, FC, mu0, rho, theta, Deltat):
             CKA     = C @ K @ A
             gb      = np.zeros(Nc)
             gntheta = np.zeros(Nf)
-            MatL    = M + theta * ( CKA )
-            MatR    = (theta - 1) * ( CKA + M )
-            gb      = np.zeros(nunk)
+            MatL    = M + theta * CKA
+            MatR    = (theta - 1)*CKA + M 
             gb      = vcells[0:Nc]  - C @ K @ gntheta
             print('Matrix L and R (csr-slicing) - only U: ', time.time() - t0)
     #------------------------------------------------
