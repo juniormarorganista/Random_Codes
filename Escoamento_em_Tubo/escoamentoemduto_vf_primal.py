@@ -26,8 +26,6 @@ print(dir_)
 
 #True = Activate this for efficiency on large grids (Com fluxo e mais rapido)
 flag_coo = False 
-#True = Para calcular o sistema com o fluxo J 
-flag_JU  = False 
 #OBS  = Para calcular o sistema primal somente com U, use False nas duas flags acima
 #True = Mu constante em todo dominio e False = mu interpolate(item 5)
 flag_mu  = False  
@@ -45,10 +43,7 @@ Nh     = n1 * (n2+1)
 Nv     = n2 * (n1+1)
 Nf     = Nh + Nv
 
-if flag_JU:
-    nunk = Nc + Nf
-else:
-    nunk = Nc
+nunk = Nc 
 
 def CreateMesh(L1, L2, N1, N2, refine_walls=False, alpha=0.12):
     x = np.linspace(0.0, L1, N1)
@@ -74,12 +69,11 @@ def CreateMesh(L1, L2, N1, N2, refine_walls=False, alpha=0.12):
 x, y = CreateMesh(L1, L2, N1, N2, False, 0.12) # Be careful with alpha
 
 # Post-processing
-def WriteSol(x, y, n1, n2, n, tn, U):
-    filename = 'ref3FVsol'+str(n)+'.vtr'
+def WriteSol(x, y, n1, n2, nstep, n, tn, U):
+    filename = 'ref3FVsol_primal_'+str(n).zfill(len(str(nstep)))+'.vtr'
     grid = RectilinearGrid(filename, (x, y), compression=True)
     grid.addCellData(DataArray(U.reshape(n1,n2), range(2), 'Velocity'))
     grid.write()
-    
     shutil.move(cwd+'/'+filename ,dir_)
 
 # Just for testing the mesh
@@ -136,7 +130,7 @@ for i1 in range(n1):
         CF[g,:] = [fh(i1,i2,n1), fv(i1+1,i2,n1,n2), fh(i1,i2+1,n1), fv(i1,i2,n1,n2)]
 
 #plt.spy(A.todense(),precision=0.1,markersize=1)
-def BuildSystem(x, y, CF, FC, mu0, rho, theta, Deltat):
+def BuildSystem(nunk, x, y, CF, FC, mu0, rho, theta, Deltat):
     #------------------------------------------------
     # Total number of unknowns
     #------------------------------------------------
@@ -146,7 +140,6 @@ def BuildSystem(x, y, CF, FC, mu0, rho, theta, Deltat):
     Nh = n1 * (n2+1)
     Nv = n2 * (n1+1)
     Nf = Nh + Nv
-    nunk = Nc + Nf
     if(flag_coo):
         row, col, coefL, coefR = [], [], [], []
     #------------------------------------------------
@@ -281,32 +274,15 @@ def BuildSystem(x, y, CF, FC, mu0, rho, theta, Deltat):
         gb = np.zeros(nunk)
         gb[Nf:nunk] = vcells[0:Nc]
     else:
-        if (flag_JU):
-            t0 = time.time()
-            B  = scipy.sparse.csr_matrix((nunk,nunk), dtype=float)
-            B[ 0:Nf    , 0:Nf    ] = Kinv
-            B[ 0:Nf    , Nf:nunk ] = -A
-            B[ Nf:nunk , 0:Nf    ] =  C
-            ### MatL
-            MatL = theta * B
-            MatL[ Nf:nunk , Nf:nunk ] = M
-            ### MatR
-            MatR = -(1-theta) * B
-            MatR[ Nf:nunk , Nf:nunk ] = M
-            print('Matrix L and R (csr-slicing) - JU: ', time.time() - t0)
-            # Vector gb
-            gb          = np.zeros(nunk)
-            gb[Nf:nunk] = vcells[0:Nc]
-        else:
-            t0      = time.time()
-            CKA     = C @ K @ A
-            gb      = np.zeros(Nc)
-            gntheta = np.zeros(Nf)
-            MatL    = M + theta * ( CKA )
-            MatR    = (theta - 1) * ( CKA + M )
-            gb      = np.zeros(nunk)
-            gb      = vcells[0:Nc]  - C @ K @ gntheta
-            print('Matrix L and R (csr-slicing) - only U: ', time.time() - t0)
+        t0      = time.time()
+        CKA     = C @ K @ A
+        gb      = np.zeros(Nc)
+        gntheta = np.zeros(Nf)
+        MatL    = M + theta * CKA 
+        MatR    = (theta - 1) * ( CKA + M )
+        gb      = np.zeros(nunk)
+        gb      = vcells[0:Nc]  - C @ K @ gntheta
+        print('Matrix L and R (csr-slicing) - only U: ', time.time() - t0)
     #------------------------------------------------
     #Visualize sparsity pattern
     #plt.spy(B.todense(),precision=0.1,markersize=1)
@@ -328,19 +304,14 @@ freq_out = 100
 t, Deltat = np.linspace(t0, tf, nsteps, retstep=True, endpoint=False)
 
 # Build algebraic objects
-MatL, MatR, gb = BuildSystem(x, y, CF, FC, mu0, rho, theta, Deltat)
+MatL, MatR, gb = BuildSystem(nunk, x, y, CF, FC, mu0, rho, theta, Deltat)
 
 # Initial condition
-JU = np.zeros(nunk)
+U = np.zeros(nunk)
 
 print('Begin loop over time steps:')
 t0 = time.time()
 for n in range(nsteps):
-    if (flag_JU):
-        U = JU[Nf:nunk]
-    else:
-        U=JU
-    WriteSol(x, y, n1, n2, n, t[n], U)
     if(n % freq_out == 0 or n == nsteps-2):
         print('Step solution:= ', n, 'at time := ', t[n])
     #    print('Writing solution file', n, 'at time= ', t[n])
@@ -350,7 +321,9 @@ for n in range(nsteps):
     #        U=JU
     #    WriteSol(x, y, n1, n2, n, t[n], U)
     G   = PressGrad(t[n] + theta*Deltat)
-    rhs = MatR @ JU - G * gb
-    JU  = scipy.sparse.linalg.spsolve(MatL, rhs)
+    rhs = MatR @ U - G * gb
+    U  = scipy.sparse.linalg.spsolve(MatL, rhs)
+
+    WriteSol(x, y, n1, n2, nsteps, n, t[n], U)
 
 print('Time stepping: ', time.time()-t0)
