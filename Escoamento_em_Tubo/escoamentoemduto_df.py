@@ -17,7 +17,11 @@ from uvw import RectilinearGrid, DataArray
 
 #IO: Creating dir
 cwd =os.getcwd()
-dir_=cwd+'/casos'
+dir_=cwd+'/results_U'
+
+if os.path.isdir(dir_):
+    # remove dir_ and all contains
+    shutil.rmtree(dir_)
 
 if not os.path.exists(dir_):
     os.makedirs(dir_)

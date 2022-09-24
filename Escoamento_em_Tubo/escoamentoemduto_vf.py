@@ -26,7 +26,7 @@ print(dir_)
 #True = Activate this for efficiency on large grids (Com fluxo e mais rapido)
 flag_coo = False 
 #True = Para calcular o sistema com o fluxo J 
-flag_JU  = False 
+flag_JU  = True 
 #OBS  = Para calcular o sistema primal somente com U, use False nas duas flags acima
 #True = Mu constante em todo dominio e False = mu interpolate(item 5)
 flag_mu  = False  
@@ -78,6 +78,33 @@ def WriteSol(x, y, n1, n2, n, tn, U):
     grid = RectilinearGrid(filename, (x, y), compression=True)
     grid.addCellData(DataArray(U.reshape(n1,n2), range(2), 'Velocity'))
     grid.write()
+    
+    shutil.move(cwd+'/'+filename ,dir_)
+
+def savevtkfile(U, J, x, y, step, N1, N2, N3=1):
+    filename = 'solUJ'+str(step)+'.vtr'
+    with open(filename, "w") as ff:
+       header =  "# vtk DataFile Version 3.0\n"
+       header += "vtk output\n"
+       header += "ASCII\n"
+       header += "DATASET STRUCTURED_GRID\n"
+       header += "DIMENSIONS "+str(N1)+" "+str(N2)+" "+str(N3)+"\n"
+       header += "POINTS "+str(N1*N2*N3)+" FLOAT\n"
+       ff.write(header)
+       for k in range(N3):
+          for j in range(N2):
+             for i in range(N1):
+                ff.write('%.16f %.16f %.16f\n' % (x[i], y[j], 0.0))
+       ff.write("POINT_DATA "+str(Nc*N3)+" \n")
+       ff.write("VECTORS u FLOAT\n")
+       for k in range(N3):
+          for g in range(Nc):
+              ff.write('%.16f %.16f %.16f\n' % (0.0, 0.0, U[g]))
+       # ff.write("POINT_DATA "+str(4*N1*N2*N3)+" \n")
+       # ff.write("VECTORS flu FLOAT\n")
+       # for g in range(Nc):
+           # for f in CF[g,:]:
+               # ff.write('%.16f %.16f %.16f\n' % (0.0, 0.0, J[f]))
     
     shutil.move(cwd+'/'+filename ,dir_)
 
@@ -336,11 +363,13 @@ t0 = time.time()
 for n in range(nsteps):
     if (flag_JU):
         U = JU[Nf:nunk]
+        J = JU[0:Nf]
     else:
         U=JU
     WriteSol(x, y, n1, n2, n, t[n], U)
     if(n % freq_out == 0 or n == nsteps-2):
         print('Step solution:= ', n, 'at time := ', t[n])
+        #savevtkfile(U, J, x, y, n, n1, n2, 1)
     #    print('Writing solution file', n, 'at time= ', t[n])
     #    if (flag_JU):
     #        U = JU[Nf:nunk]
